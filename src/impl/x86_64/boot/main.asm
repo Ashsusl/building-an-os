@@ -1,10 +1,24 @@
 global start
 extern long_mode_start
 
+extern idt_init
+extern pic_init
+extern keyboard_init
+
 section .text
 bits 32
 start:
 	mov esp, stack_top
+
+	; Initialize the idt (interrupt descriptor table.)
+	call idt_init
+
+	; Initialize the PIC (Programmable interrupt handler.)
+	; so that we can handle IRQ1
+	call pic_init
+
+	; Now we intialize the keyboard (IRQ1)
+	call keyboard_init
 
 	call check_multiboot
 	call check_cpuid
