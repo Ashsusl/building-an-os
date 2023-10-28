@@ -1,24 +1,11 @@
 global start
 extern long_mode_start
 
-extern idt_init
-extern pic_init
-extern keyboard_init
 
 section .text
 bits 32
 start:
 	mov esp, stack_top
-
-	; Initialize the idt (interrupt descriptor table.)
-	call idt_init
-
-	; Initialize the PIC (Programmable interrupt handler.)
-	; so that we can handle IRQ1
-	call pic_init
-
-	; Now we intialize the keyboard (IRQ1)
-	call keyboard_init
 
 	call check_multiboot
 	call check_cpuid
@@ -135,15 +122,15 @@ error:
 	hlt
 
 section .bss
-align 4096
+align 16384
 page_table_l4:
-	resb 4096
+	resb 16384
 page_table_l3:
-	resb 4096
+	resb 16384
 page_table_l2:
-	resb 4096
+	resb 16384
 stack_bottom:
-	resb 4096 * 4
+	resb 16384 * 4
 stack_top:
 
 section .rodata
