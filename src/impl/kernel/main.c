@@ -1,4 +1,4 @@
-#include <print.h>
+#include <kprint.h>
 void kernel_main()
 {
     print_clear();
