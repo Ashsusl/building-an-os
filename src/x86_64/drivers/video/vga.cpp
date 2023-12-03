@@ -6,10 +6,6 @@ namespace drivers::video::VGA
     const static size_t NUM_COLS = 80; // The number of columns in the VGA
     const static size_t NUM_ROWS = 25; // The number of rows in the VGA
 
-    uint8_t key_buffer_index = 0;
-    char *key_buffer;
-    char *clear_buffer;
-
     /// The currently active brush/color for printing to the VGA.
     uint8_t current_color = Color::from(Color::WHITE, Color::BLACK);
 
@@ -18,6 +14,7 @@ namespace drivers::video::VGA
         .row = 0,
         .col = 0,
     };
+
 
     void back_space()
     {
@@ -204,4 +201,5 @@ namespace drivers::video::VGA
         int_to_string(value, buffer, 10); // Convert to decimal
         print_str(buffer);
     }
+    
 }

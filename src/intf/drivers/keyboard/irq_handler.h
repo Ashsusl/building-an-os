@@ -9,7 +9,5 @@ namespace drivers::keyboard
 
     __attribute__((interrupt)) 
     void irq_handler(interrupt_frame *frame);
-    void reset_key_buffer(char* string);
-    uint16_t strLength(char *string);
-    uint8_t strEqual(char *string1, char *string2);
+    void reset_key_buffer();
 }

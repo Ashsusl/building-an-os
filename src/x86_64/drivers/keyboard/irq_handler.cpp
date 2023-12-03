@@ -1,5 +1,6 @@
 #include "drivers/keyboard/irq_handler.h"
 #include "drivers/video/vga.h"
+#include "drivers/memory/mem.h"
 #include "port.h"
 #include "pic.h"
 
@@ -8,6 +9,16 @@ namespace Color = VGA::Color;
 
 namespace drivers::keyboard
 {
+    constexpr size_t BUFFER_SIZE = 256;
+    char user_input_buffer[BUFFER_SIZE];
+    size_t user_input_index = 0;
+
+    void reset_key_buffer()
+    {
+        memset(user_input_buffer, 0, BUFFER_SIZE);
+        user_input_index = 0;
+    }
+
     /// The handler for the keyboard's IRQ1.
     /// Required for __attribute__((interrupt))
     void irq_handler(struct interrupt_frame *frame)
@@ -33,7 +44,6 @@ namespace drivers::keyboard
                     break;
 
                 case K_BKSP:
-                    VGA::back_space();
                     break;
 
                 case K_ENTR:
@@ -106,9 +116,22 @@ namespace drivers::keyboard
                     break;
 
                 case K_BKSP:
+                    VGA::back_space();
+                    VGA::update_cursor();
                     break;
 
                 case K_ENTR:
+                    if (strEqual(user_input_buffer, "clear"))
+                    {
+                        VGA::clear_screen();
+                    }
+                    else
+                    {
+                        VGA::print_str("\nBAD COMMAND!!");
+                    }
+                    VGA::print_str("\nroot::> ");
+                    VGA::update_cursor();
+                    reset_key_buffer();
                     break;
 
                 case K_LCTL:
@@ -148,6 +171,11 @@ namespace drivers::keyboard
                     break;
 
                 default:
+                    if (user_input_index < BUFFER_SIZE - 1)
+                    {
+                        user_input_buffer[user_input_index++] = key;
+                        user_input_buffer[user_input_index] = '\0';
+                    }
                     break;
                 }
             }
