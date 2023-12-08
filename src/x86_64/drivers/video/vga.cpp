@@ -15,7 +15,6 @@ namespace drivers::video::VGA
         .col = 0,
     };
 
-
     void back_space()
     {
         if (VGA::cursor.col > 8)
@@ -201,5 +200,55 @@ namespace drivers::video::VGA
         int_to_string(value, buffer, 10); // Convert to decimal
         print_str(buffer);
     }
-    
+
+    void print_hex(unsigned long n)
+    {
+        // Define the hexadecimal digits
+        const char *hex_digits = "0123456789ABCDEF";
+
+        // Create a buffer to store the hexadecimal string
+        char hex_str[17];   // An unsigned long is up to 16 hex digits
+        hex_str[16] = '\0'; // Null-terminate the string
+
+        // Convert each digit of the number into hexadecimal
+        for (int i = 15; i >= 0; --i)
+        {
+            hex_str[i] = hex_digits[n & 0xF]; // Get the last hex digit of n
+            n >>= 4;                          // Right shift n by 4 bits to get the next digit
+        }
+
+        // Print the hexadecimal string
+        VGA::print_str(hex_str);
+    }
+
+    size_t get_cursor_col()
+    {
+        return cursor.col;
+    }
+
+    size_t get_cursor_row()
+    {
+        return cursor.row;
+    }
+
+    void set_cursor_position(size_t col, size_t row)
+    {
+        cursor.col = col;
+        cursor.row = row;
+    }
+
+    void draw_mouse_cursor(size_t col, size_t row)
+    {
+        set_color(Color::WHITE, Color::BLACK);
+        set_cursor_position(col, row);
+        print_chr('#'); // You can use any character for the mouse cursor
+    }
+
+    void clear_mouse_cursor(size_t col, size_t row)
+    {
+        set_color(Color::BLACK, Color::BLACK); // Set color to background color for clearing
+        set_cursor_position(col, row);
+        print_chr(' '); // Clear the character at the cursor position
+    }
+
 }

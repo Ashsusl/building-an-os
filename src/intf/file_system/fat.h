@@ -97,6 +97,10 @@ namespace drivers::video::VGA
     // Function declarations
     void readBootSector(fat_BS_t *boot_sector);
     void detectFatTypeAndPrint(const fat_BS_t &bootSector);
+    void readFATandFollowChain(unsigned int active_cluster, unsigned int first_fat_sector, unsigned int sector_size);
+    void readSector(unsigned int sector_number, unsigned char *buffer);
+    void detectFatFileSystem(fat_BS_t *fat_boot, fat_extBS_32_t *fat_boot_ext_32);
+    void readBootSectorAndPrint(fat_BS_t *boot_sector);
 }
 
 #endif

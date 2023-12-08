@@ -1,0 +1,59 @@
+#include "drivers/mouse/mirq_handler.h"
+#include "port.h"
+#include "drivers/video/vga.h"
+
+namespace VGA = drivers::video::VGA;
+namespace Color = VGA::Color;
+
+namespace custom
+{
+    template <typename T>
+    constexpr const T &min(const T &a, const T &b)
+    {
+        return a < b ? a : b;
+    }
+
+    template <typename T>
+    constexpr const T &max(const T &a, const T &b)
+    {
+        return a > b ? a : b;
+    }
+}
+
+
+namespace drivers::mouse
+{
+    constexpr uint8_t MOUSE_DATA_PORT = 0x60;
+    constexpr int MOUSE_SENSITIVITY = 2;
+
+    void initialize_mouse()
+    {
+        // Add your mouse initialization code here if needed
+    }
+
+    void handle_mouse_interrupt()
+    {
+        uint8_t extra_bits = inb(MOUSE_DATA_PORT);
+        uint8_t move_x = inb(MOUSE_DATA_PORT);
+        uint8_t move_y = inb(MOUSE_DATA_PORT);
+
+        int x = static_cast<int>(move_x) - (static_cast<int>(extra_bits << 4) & 0x100);
+        int y = static_cast<int>(move_y) - (static_cast<int>(extra_bits << 3) & 0x100);
+
+        if (!(x == 65 && y == 65) && !(x == 97 && y == -159))
+        {
+            // Clear the previous cursor
+            VGA::clear_mouse_cursor(VGA::get_cursor_col(), VGA::get_cursor_row());
+
+            // Update cursor position
+            VGA::set_cursor_position(custom::max(static_cast<size_t>(0), custom::min(VGA::get_cursor_col(), static_cast<size_t>(79))),
+                                     custom::max(static_cast<size_t>(0), custom::min(VGA::get_cursor_row(), static_cast<size_t>(24))));
+
+            // Draw the new cursor
+            VGA::draw_mouse_cursor(VGA::get_cursor_col(), VGA::get_cursor_row());
+        }
+
+        // Acknowledge the end of interrupt to the interrupt controller
+        outb(0x20, 0x20); // Assuming IRQ 12 is used for the mouse
+    }
+}

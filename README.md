@@ -4,6 +4,8 @@ Also here are the necessary commands to build the environment and emulate the OS
 docker build buildenv -t myos-buildenv
 docker run --rm -it -v "%cd%":/root/env myos-buildenv
 make build-x86_64
+make create-hdd
+make clean
 exit
 qemu-system-x86_64 -cdrom dist/x86_64/kernel.iso
 docker rmi myos-buildenv -f

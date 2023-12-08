@@ -15,7 +15,7 @@ namespace drivers::keyboard
 
     void reset_key_buffer()
     {
-        memset(user_input_buffer, 0, BUFFER_SIZE);
+        memSet(user_input_buffer, 0, BUFFER_SIZE);
         user_input_index = 0;
     }
 

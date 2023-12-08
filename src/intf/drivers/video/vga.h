@@ -71,6 +71,16 @@ namespace drivers::video::VGA
 
     void set_color(uint8_t color);
 
+    size_t get_cursor_row();
+
+    size_t get_cursor_col();
+
+    void set_cursor_position(size_t col, size_t row);
+
+    void draw_mouse_cursor(size_t col, size_t row);
+
+    void clear_mouse_cursor(size_t col, size_t row);
+
     /// Sets the active brush (foreground and background colors) to be used while printing to the VGA.
     /// The foreground color to set as active.
     /// The background color to set as active.
@@ -78,4 +88,5 @@ namespace drivers::video::VGA
     {
         set_color(Color::from(foreground, background));
     }
+    void print_hex(unsigned long n);
 }

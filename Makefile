@@ -46,3 +46,12 @@ clean:
 	rm -rf build/
 	rm -rf dist/
 	rm -f targets/x86_64/iso/boot/kernel.bin
+
+.PHONY: create-hdd
+create-hdd:
+	mkdir -p dist/hdd && \
+	dd if=/dev/zero of=dist/hdd/hdd.img bs=1M count=64 && \
+	mkfs.fat -F 32 -n "My os" dist/hdd/hdd.img && \
+	mmd -i dist/hdd/hdd.img ::/EFI && \
+	mmd -i dist/hdd/hdd.img ::/EFI/BOOT && \
+	mcopy -i dist/hdd/hdd.img dist/x86_64/kernel.bin ::/EFI/BOOT
