@@ -1,6 +1,7 @@
 #include "drivers/video/vga.h"
 #include <idt.h>
 #include "file_system/fat.h"
+#include "file_system/disk.h"
 #include "multiboot.h"
 #include "drivers/string/string.h"
 #include "drivers/keyboard/irq_handler.h"
@@ -12,6 +13,9 @@ namespace F = drivers::file::F;
 
 void print_welcome();
 void handle_command(const char *command);
+void clearBuffer(char *buffer, unsigned int size);
+
+char buffer[1024];
 
 /// The entry point into the MY_OS kernel.
 extern "C" void kernel_main()
@@ -58,12 +62,6 @@ void handle_command(const char *command)
     {
         F::createFile("hello.txt", 0x00, 1024);
     }
-    else if (STR::strEqual(command, "read"))
-    {
-        char buffer[1024];
-        F::readFile("hello.txt", buffer, sizeof(buffer));
-        VGA::print_str(buffer);
-    }
     else if (STR::strEqual(command, "write"))
     {
         const char *data = "Hello, World!";
@@ -71,13 +69,13 @@ void handle_command(const char *command)
     }
     else if (STR::strEqual(command, "read"))
     {
-        char buffer[1024];
         F::readFile("hello.txt", buffer, sizeof(buffer));
         VGA::print_str(buffer);
     }
-    else if(STR::strEqual(command, "delete"))
+    else if (STR::strEqual(command, "delete"))
     {
         F::deleteFile("hello.txt");
+        clearBuffer(buffer, sizeof(buffer));
     }
     else
     {
@@ -86,4 +84,12 @@ void handle_command(const char *command)
     VGA::print_str("\nroot::> ");
     VGA::update_cursor();
     return;
+}
+
+void clearBuffer(char *buffer, unsigned int size)
+{
+    for (unsigned int i = 0; i < size; ++i)
+    {
+        buffer[i] = 0;
+    }
 }

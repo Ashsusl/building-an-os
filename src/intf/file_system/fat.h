@@ -2,8 +2,6 @@
 #define FAT_H
 
 #include <stdint.h>
-#include "drivers/video/vga.h"
-#include <port.h>
 
 #pragma pack(push, 1)
 
@@ -93,19 +91,11 @@ namespace drivers::file::F
     } __attribute__((packed)) fat_BS_t;
 
     void createFile(const char *filename, uint8_t attributes, uint32_t fileSize);
-    uint16_t findAvailableCluster();
-    void writeSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize);
-    void readBootSector(fat_BS_t *bootSector);
-    unsigned int readFATandFollowChain(unsigned int activeCluster, unsigned int firstFatSector, unsigned int sectorSize);
-    void readSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize);
-    void writeCluster(unsigned int clusterNumber, const char *data, unsigned int dataSize);
-    void updateDirectoryEntry(const char *filename, const DirectoryEntry *dirEntry);
-    void readCluster(unsigned int clusterNumber, char *buffer, unsigned int bufferSize);
     void writeFile(const char *filename, const char *data, unsigned int dataSize);
     void readFile(const char *filename, char *buffer, unsigned int bufferSize);
     void deleteFile(const char *filename);
-    void markClustersAsFree(uint16_t firstCluster);
     void splitFilename(const char *filename, char *name, char *extension);
+    bool findDirectoryEntry(const char *filename, DirectoryEntry *dirEntry);
 }
 
 #pragma pack(pop)
