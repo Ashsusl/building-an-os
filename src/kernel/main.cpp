@@ -1,77 +1,32 @@
-// #include "drivers/video/vga.h"
-// #include <idt.h>
-// #include "file_system/fat.h"
-// #include "multiboot.h"
+#include "drivers/video/vga.h"
+#include <idt.h>
+#include "file_system/fat.h"
+#include "multiboot.h"
+#include "drivers/string/string.h"
 
-// namespace VGA = drivers::video::VGA;
-// namespace Color = VGA::Color;
-
-// void print_welcome();
-
-// /// The entry point into the MY_OS kernel.
-// extern "C" void kernel_main(unsigned long magic, unsigned long addr)
-// {
-//     // Print the startup banner
-//     VGA::clear_screen();
-
-//     print_welcome();
-
-//     VGA::print_hex(magic);
-
-//     VGA::print_str("\n");
-
-//     VGA::print_hex(addr);
-
-//     VGA::print_str("\n");
-
-//     print_welcome();
-
-//     // Create a fat_BS_t structure
-//     fat_BS_t bootSector;
-
-//     // Read the boot sector into the structure
-//     VGA::readBootSector(&bootSector);
-
-//     // Create temporary text input prompt
-//     VGA::print_str("\nroot::> ");
-
-//     init_idt();
-
-//     while (true)
-//         ;
-// }
+namespace STR = drivers::string::STR;
+namespace VGA = drivers::video::VGA;
+namespace Color = VGA::Color;
 
 #include "drivers/video/vga.h"
 #include <idt.h>
 #include "file_system/fat.h"
 #include "multiboot.h"
+#include "drivers/keyboard/irq_handler.h"
 
 namespace VGA = drivers::video::VGA;
 namespace Color = VGA::Color;
 
 void print_welcome();
-void print_multiboot_info(unsigned long magic, unsigned long addr);
+void handle_command(const char* command);
 
 /// The entry point into the MY_OS kernel.
-extern "C" void kernel_main(unsigned long magic, unsigned long addr)
+extern "C" void kernel_main()
 {
     // Print the startup banner
     VGA::clear_screen();
 
     print_welcome();
-
-// Print multiboot information
-    print_multiboot_info(magic, addr);
-
-    // Create a fat_BS_t structure
-    fat_BS_t bootSector;
-
-    // Read the boot sector into the structure
-    VGA::readBootSector(&bootSector);
-
-    // Print the boot sector contents
-    VGA::print_str("Boot Sector Contents:\n");
-    VGA::readBootSectorAndPrint(&bootSector);
 
     // Create temporary text input prompt
     VGA::print_str("\nroot::> ");
@@ -79,7 +34,18 @@ extern "C" void kernel_main(unsigned long magic, unsigned long addr)
     init_idt();
 
     while (true)
-        ;
+    {
+        if (drivers::keyboard::is_command_ready())
+        {
+            const char* command = drivers::keyboard::get_command();
+            handle_command(command);
+            drivers::keyboard::reset_command();
+        }
+        else
+        {
+            asm volatile("hlt");
+        }
+    }
 }
 
 /// Prints a startup banner
@@ -89,15 +55,24 @@ void print_welcome()
     VGA::print_str("Welcome to MYOS!\n");
 }
 
-// Print multiboot information
-void print_multiboot_info(unsigned long magic, unsigned long addr)
+void handle_command(const char* command)
 {
-    VGA::set_color(Color::CYAN, Color::BLACK);
-    VGA::print_str("Multiboot Magic Number: ");
-    VGA::print_hex(magic);
-    VGA::print_str("\n");
-
-    VGA::print_str("Multiboot Information Structure Address: ");
-    VGA::print_hex(addr);
-    VGA::print_str("\n");
+    if (STR::strEqual(command, "clear"))
+    {
+        VGA::clear_screen();
+    }
+    else if (STR::strEqual(command, "create"))
+    {
+        VGA::createFile("hello", "txt", 0x00, 1024, 2);
+    }
+    else if (STR::strEqual(command, "read"))
+    {
+        VGA::readFile("hello.txt");
+    }
+    else
+    {
+        VGA::print_str("\nBAD COMMAND!!");
+    }
+    VGA::print_str("\nroot::> ");
+    VGA::update_cursor();
 }

@@ -80,6 +80,7 @@ namespace drivers::video::VGA
     void draw_mouse_cursor(size_t col, size_t row);
 
     void clear_mouse_cursor(size_t col, size_t row);
+    
 
     /// Sets the active brush (foreground and background colors) to be used while printing to the VGA.
     /// The foreground color to set as active.

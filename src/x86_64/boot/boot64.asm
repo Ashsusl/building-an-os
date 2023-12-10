@@ -24,7 +24,7 @@ long_mode_start:
     ; Enable interrupts
     call init_idt
     sti
-
+  
     ; start the kernel
     call kernel_main
 

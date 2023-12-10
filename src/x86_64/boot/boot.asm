@@ -7,6 +7,7 @@ extern setup_page_tables, enable_paging
 extern gdt_descriptor, SEG_KERNEL_CODE
 extern long_mode_start
 
+
 section .text
 start:  
     cli ; clear interrupts

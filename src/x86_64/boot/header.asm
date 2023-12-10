@@ -1,7 +1,7 @@
 MAGIC         equ 0xe85250d6
 ARCH          equ 0
 HEADER_LENGTH equ header_end - header_start
-CHECKSUM      equ  -(MAGIC + HEADER_LENGTH + ARCH)
+CHECKSUM      equ  0x100000000 - (MAGIC + HEADER_LENGTH + ARCH)
 section .multiboot
 header_start:
 	dd MAGIC ; multiboot header. The helps the bootloader recognize the format.

@@ -32,26 +32,3 @@ int memCmp(const void *ptr1, const void *ptr2, uint16_t num)
 
     return 0;
 }
-
-bool strEqual(const char *str1, const char *str2)
-{
-    // const char* command = "clear";
-    while (*str1 != '\0' && *str2 != '\0')
-    {
-        if (*str1 != *str2)
-        {
-            return false;
-        }
-        str1++;
-        str2++;
-    }
-    return (*str1 == '\0' && *str2 == '\0');
-}
-
-char *strCpy(char *dest, const char *src)
-{
-    char *dest_ptr = dest;
-    while ((*dest_ptr++ = *src++))
-        ;
-    return dest;
-}

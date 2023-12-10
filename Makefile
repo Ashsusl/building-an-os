@@ -50,7 +50,7 @@ clean:
 .PHONY: create-hdd
 create-hdd:
 	mkdir -p dist/hdd && \
-	dd if=/dev/zero of=dist/hdd/hdd.img bs=1M count=64 && \
+	dd if=/dev/zero of=dist/hdd/hdd.img bs=2M count=128 && \
 	mkfs.fat -F 32 -n "My os" dist/hdd/hdd.img && \
 	mmd -i dist/hdd/hdd.img ::/EFI && \
 	mmd -i dist/hdd/hdd.img ::/EFI/BOOT && \
