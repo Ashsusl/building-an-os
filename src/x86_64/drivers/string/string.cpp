@@ -2,7 +2,7 @@
 
 namespace drivers::string::STR
 { // Custom implementation of strncpy
-    char *strncpy(char *destination, const char *source, size_t num)
+    char *strnCpy(char *destination, const char *source, size_t num)
     {
         char *result = destination;
 
@@ -26,7 +26,7 @@ namespace drivers::string::STR
     }
 
     // Custom implementation of strncmp
-    int strncmp(const char *str1, const char *str2, size_t num)
+    int strnCmp(const char *str1, const char *str2, size_t num)
     {
         while (num > 0 && *str1 != '\0' && *str2 != '\0' && *str1 == *str2)
         {
@@ -56,5 +56,28 @@ namespace drivers::string::STR
             str2++;
         }
         return (*str1 == '\0' && *str2 == '\0');
+    }
+
+    char *strChr(const char *str, int c)
+    {
+        while (*str != '\0')
+        {
+            if (*str == c)
+                return (char *)str;
+            str++;
+        }
+        if (c == '\0')
+            return (char *)str;
+        return NULL;
+    }
+
+    unsigned int strLen(const char *str)
+    {
+        unsigned int length = 0;
+        while (str[length] != '\0')
+        {
+            ++length;
+        }
+        return length;
     }
 }

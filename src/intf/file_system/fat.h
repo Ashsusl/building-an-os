@@ -7,7 +7,7 @@
 
 #pragma pack(push, 1)
 
-namespace drivers::video::VGA
+namespace drivers::file::F
 {
     enum class FatType
     {
@@ -18,6 +18,12 @@ namespace drivers::video::VGA
     };
 
     const unsigned int sector_size = 512;
+    // Constants for better readability
+    const unsigned int BAD_CLUSTER_MARKER = 0xFF7;
+    const unsigned int END_OF_FILE_MARKER = 0xFF8;
+    const unsigned int FILENAME_LENGTH = 8;
+    const unsigned int EXTENSION_LENGTH = 3;
+    const unsigned int offset = 6400;
 
     // Define a directory entry structure
     struct DirectoryEntry
@@ -86,17 +92,17 @@ namespace drivers::video::VGA
 
     } __attribute__((packed)) fat_BS_t;
 
-    // Function declarations
-    void readBootSector(fat_BS_t *boot_sector);
-    void detectFatTypeAndPrint(const fat_BS_t &bootSector);
-    void readFATandFollowChain(unsigned int active_cluster, unsigned int first_fat_sector, unsigned int sector_size);
-    void readSector(unsigned int sector_number, unsigned char *buffer);
-    void detectFatFileSystem(fat_BS_t *fat_boot, fat_extBS_32_t *fat_boot_ext_32);
-    void readBootSectorAndPrint(fat_BS_t *boot_sector);
-    int strncmp(const char *str1, const char *str2, size_t num);
-    char *strncpy(char *destination, const char *source, size_t num);
-    void readFile(const char *filename);
-    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize, uint16_t firstCluster);
+    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize);
+    uint16_t findAvailableCluster();
+    void writeSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize);
+    void readBootSector(fat_BS_t *bootSector);
+    unsigned int readFATandFollowChain(unsigned int activeCluster, unsigned int firstFatSector, unsigned int sectorSize);
+    void readSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize);
+    void writeCluster(unsigned int clusterNumber, const char *data, unsigned int dataSize);
+    void updateDirectoryEntry(const char *filename, const DirectoryEntry *dirEntry);
+    void readCluster(unsigned int clusterNumber, char *buffer, unsigned int bufferSize);
+    void writeFile(const char *filename, const char *data, unsigned int dataSize);
+    void readFile(const char *filename, char *buffer, unsigned int bufferSize);
 }
 
 #pragma pack(pop)

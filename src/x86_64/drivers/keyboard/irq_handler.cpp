@@ -58,6 +58,18 @@ namespace drivers::keyboard
                 VGA::update_cursor();
             }
         }
+        else if (key == K_LSFT)
+        {
+            key_state.shift = true;
+        }
+        else if (key == K_LCTL)
+        {
+            key_state.ctrl = true;
+        }
+        else if (key == K_CAPS)
+        {
+            key_state.caps = !key_state.caps; // Toggle caps lock state
+        }
         else
         {
             if (user_input_index < BUFFER_SIZE - 1)

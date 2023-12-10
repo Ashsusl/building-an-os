@@ -1,52 +1,138 @@
 #include "file_system/fat.h"
 #include "drivers/video/vga.h"
+#include "drivers/string/string.h"
+#include "drivers/memory/mem.h"
 #include "port.h"
 #include "stdint.h"
-#include "drivers/string/string.h"
 
+namespace VGA = drivers::video::VGA;
 namespace STR = drivers::string::STR;
-namespace drivers::video::VGA
+namespace drivers::file::F
 {
-
-    // Constants for better readability
-    const unsigned int BAD_CLUSTER_MARKER = 0xFF7;
-    const unsigned int END_OF_FILE_MARKER = 0xFF8;
-    const unsigned int FILENAME_LENGTH = 8;
-    const unsigned int EXTENSION_LENGTH = 3;
-
-    // Function to detect FAT type and print
-    void detectFatTypeAndPrint(const fat_BS_t &bootSector)
+    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize)
     {
-        unsigned int totalSectors = (bootSector.total_sectors_16 == 0) ? bootSector.total_sectors_32 : bootSector.total_sectors_16;
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
 
-        if (totalSectors < 4085)
+        // Calculate the root directory sector
+        unsigned int rootDirSectors = ((bootSector.root_entry_count * 32) + (bootSector.bytes_per_sector - 1)) / bootSector.bytes_per_sector;
+        unsigned int firstDataSector = bootSector.reserved_sector_count + (bootSector.table_count * bootSector.table_size_16) + rootDirSectors;
+        unsigned int firstSectorofRootDir = firstDataSector - rootDirSectors;
+
+        // Read the root directory into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        readSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+        // Find an empty directory entry (first byte of filename will be 0x00)
+        for (int i = 0; i < bootSector.bytes_per_sector; i += 32)
         {
-            print_str("Detected FAT12\n");
+            if (buffer[i] == 0x00)
+            {
+                // Find an available cluster
+                uint16_t firstCluster = findAvailableCluster();
+
+                // If no available cluster was found, print an error message and return
+                if (firstCluster == 0)
+                {
+                    VGA::print_str("\nNo available clusters found\n");
+                    return;
+                }
+
+                // Copy the filename and extension
+                memCpy(buffer + i, filename, FILENAME_LENGTH);
+                memCpy(buffer + i + 8, extension, EXTENSION_LENGTH);
+
+                // Set the file attributes
+                buffer[i + 11] = attributes;
+
+                // Set the file size
+                *(uint32_t *)(buffer + i + 28) = fileSize;
+
+                // Set the first cluster
+                *(uint16_t *)(buffer + i + 26) = firstCluster;
+
+                // Write the sector back to disk
+                writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+                VGA::print_str("\nFile created successfully\n");
+                return;
+            }
         }
-        else if (totalSectors < 65525)
-        {
-            print_str("Detected FAT16\n");
-        }
-        else
-        {
-            print_str("Detected FAT32\n");
-        }
+
+        VGA::print_str("\nNo empty directory entries found\n");
     }
 
-    // Function to read the boot sector
+    uint16_t findAvailableCluster()
+    {
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
+
+        // Calculate the first FAT sector
+        unsigned int firstFatSector = bootSector.reserved_sector_count;
+
+        // Read the FAT into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        readSector(firstFatSector, buffer, bootSector.bytes_per_sector);
+
+        // Scan the FAT for an available entry (marked with a 0)
+        for (int i = 0; i < bootSector.bytes_per_sector; i += 2)
+        {
+            if (*(uint16_t *)(buffer + i) == 0)
+            {
+                // Mark the cluster as used (with an end-of-file marker)
+                *(uint16_t *)(buffer + i) = END_OF_FILE_MARKER;
+
+                // Write the FAT back to disk
+                writeSector(firstFatSector, buffer, bootSector.bytes_per_sector);
+
+                // Return the cluster number
+                return i / 2;
+            }
+        }
+
+        // No available clusters found
+        return 0;
+    }
+
+    void writeSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize)
+    {
+        // Assuming that the disk is memory-mapped at address 0x100000
+        uint8_t *disk = reinterpret_cast<uint8_t *>(0x100000);
+
+        // Calculate the address of the sector
+        uint8_t *sectorAddress = disk + sectorNumber * sectorSize;
+
+        // Copy the buffer into the sector
+        memCpy(sectorAddress, buffer, sectorSize);
+    }
+
     void readBootSector(fat_BS_t *bootSector)
     {
         // Assuming that the disk is memory-mapped at address 0x100000
         uint8_t *disk = reinterpret_cast<uint8_t *>(0x100000);
 
         // Copy the boot sector into the structure
-        for (size_t i = 0; i < sizeof(fat_BS_t); i++)
-        {
-            reinterpret_cast<uint8_t *>(bootSector)[i] = disk[i];
-        }
+        memCpy(bootSector, disk, sizeof(fat_BS_t));
     }
 
-    // Function to read a sector from the disk
+    unsigned int readFATandFollowChain(unsigned int activeCluster, unsigned int firstFatSector, unsigned int sectorSize)
+    {
+        unsigned char FATTable[sectorSize * 2];                       // needs two in case we straddle a sector
+        unsigned int fatOffset = activeCluster + (activeCluster / 2); // multiply by 1.5
+        unsigned int fatSector = firstFatSector + (fatOffset / sectorSize);
+        unsigned int entOffset = fatOffset % sectorSize;
+
+        // Read two sectors from disk starting at "fatSector" into "FATTable".
+        readSector(fatSector, FATTable, sectorSize * 2);
+
+        unsigned short tableValue = *(unsigned short *)&FATTable[entOffset];
+
+        tableValue = (activeCluster & 1) ? tableValue >> 4 : tableValue & 0xfff;
+
+        // The variable "tableValue" now has the information you need about the next cluster in the chain.
+        return tableValue; // Return the next cluster number
+    }
+
     void readSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize)
     {
         // Assuming that the disk is memory-mapped at address 0x100000
@@ -56,144 +142,119 @@ namespace drivers::video::VGA
         uint8_t *sectorAddress = disk + sectorNumber * sectorSize;
 
         // Copy the sector into the buffer
-        for (size_t i = 0; i < sectorSize; i++)
-        {
-            buffer[i] = sectorAddress[i];
-        }
+        memCpy(buffer, sectorAddress, sectorSize);
     }
 
-    // Function to read the boot sector and print its hexadecimal values
-    void readBootSectorAndPrint(fat_BS_t *bootSector)
+    bool findDirectoryEntry(const char *filename, DirectoryEntry *dirEntry)
     {
-        // Assuming that the disk is memory-mapped at address 0x100000
-        uint8_t *disk = reinterpret_cast<uint8_t *>(0x100000);
+        // Calculate the root directory sector
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
+        unsigned int rootDirSectors = ((bootSector.root_entry_count * 32) + (bootSector.bytes_per_sector - 1)) / bootSector.bytes_per_sector;
+        unsigned int firstDataSector = bootSector.reserved_sector_count + (bootSector.table_count * bootSector.table_size_16) + rootDirSectors;
+        unsigned int firstSectorofRootDir = firstDataSector - rootDirSectors;
 
-        // Copy the boot sector into the structure
-        for (size_t i = 0; i < sizeof(fat_BS_t); i++)
+        // Read the root directory into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        readSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+        // Find the directory entry for the file
+        for (int i = 0; i < bootSector.bytes_per_sector; i += 32)
         {
-            reinterpret_cast<uint8_t *>(bootSector)[i] = disk[i];
-
-            // Print the hexadecimal value of each byte
-            print_hex(bootSector->extended_section[i]);
-            print_str(" "); // Add a space between each byte for better readability
-        }
-
-        print_str("\n");
-    }
-
-    // Function to read the FAT and follow the cluster chain
-    void readFATandFollowChain(unsigned int activeCluster, unsigned int firstFatSector, unsigned int sectorSize)
-    {
-        unsigned char FATTable[sectorSize * 2];                       // needs two in case we straddle a sector
-        unsigned int fatOffset = activeCluster + (activeCluster / 2); // multiply by 1.5
-        unsigned int fatSector = firstFatSector + (fatOffset / sectorSize);
-        unsigned int entOffset = fatOffset % sectorSize;
-
-        // At this point, you need to read two sectors from disk starting at "fatSector" into "FATTable".
-        readSector(fatSector, FATTable, sectorSize * 2);
-
-        unsigned short tableValue = *(unsigned short *)&FATTable[entOffset];
-
-        tableValue = (activeCluster & 1) ? tableValue >> 4 : tableValue & 0xfff;
-
-        // The variable "tableValue" now has the information you need about the next cluster in the chain.
-        if (tableValue >= END_OF_FILE_MARKER)
-        {
-            // There are no more clusters in the chain. This means that the whole file has been read.
-            print_str("End of file reached.\n");
-        }
-        else if (tableValue == BAD_CLUSTER_MARKER)
-        {
-            // This cluster has been marked as "bad". "Bad" clusters are prone to errors and should be avoided.
-            print_str("Bad cluster encountered.\n");
-        }
-        else
-        {
-            // "tableValue" is the cluster number of the next cluster in the file.
-            print_str("Next cluster in the file: ");
-            print_int(tableValue);
-            print_str("\n");
-        }
-    }
-
-    // Function to create a new file
-    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize, uint16_t firstCluster)
-    {
-        // Assuming you have a directory entry array representing the root directory
-        // and a file allocation table (FAT) array
-        DirectoryEntry *rootDirectory = reinterpret_cast<DirectoryEntry *>(0x100000); // Adjust this based on your memory mapping
-        uint16_t *FAT = reinterpret_cast<uint16_t *>(0x110000);                       // Adjust this based on your memory mapping
-
-        // Find an available entry in the root directory
-        size_t entryIndex = 0;
-        while (entryIndex < 512 && rootDirectory[entryIndex].filename[0] != 0x00 && rootDirectory[entryIndex].filename[0] != 0xE5)
-        {
-            entryIndex++;
-        }
-
-        if (entryIndex < 512)
-        {
-            // Copy filename, extension, attributes, fileSize, and firstCluster to the directory entry
-            STR::strncpy(rootDirectory[entryIndex].filename, filename, FILENAME_LENGTH);
-            STR::strncpy(rootDirectory[entryIndex].extension, extension, EXTENSION_LENGTH);
-            rootDirectory[entryIndex].attributes = attributes;
-            rootDirectory[entryIndex].file_size = fileSize;
-            rootDirectory[entryIndex].first_cluster = firstCluster;
-
-            // Update the FAT to mark the cluster chain as used
-            size_t cluster = firstCluster;
-            while (FAT[cluster] != END_OF_FILE_MARKER)
+            if (STR::strnCmp(reinterpret_cast<const char *>(buffer + i), filename, FILENAME_LENGTH) == 0)
             {
-                size_t nextCluster = FAT[cluster];
-                FAT[cluster] = BAD_CLUSTER_MARKER; // Mark as used
-                cluster = nextCluster;
-            }
-            FAT[cluster] = END_OF_FILE_MARKER; // Mark the last cluster in the chain
-
-            VGA::print_str("File created successfully.\n");
-        }
-        else
-        {
-            VGA::print_str("No available entry in the root directory.\n");
-        }
-    }
-
-    // Function to read the content of a file
-    void readFile(const char *filename)
-    {
-        // Assuming you have a directory entry array representing the root directory
-        // and a file allocation table (FAT) array
-        DirectoryEntry *rootDirectory = reinterpret_cast<DirectoryEntry *>(0x100000); 
-        uint16_t *FAT = reinterpret_cast<uint16_t *>(0x110000);                       
-
-        // Find the file in the root directory
-        size_t entryIndex = 0;
-        while (entryIndex < 512 &&
-               STR::strncmp(rootDirectory[entryIndex].filename, filename, FILENAME_LENGTH) != 0)
-        {
-            entryIndex++;
-        }
-
-        if (entryIndex < 512)
-        {
-            // Read the file content and print it
-            size_t cluster = rootDirectory[entryIndex].first_cluster;
-            while (cluster != END_OF_FILE_MARKER)
-            {
-                // Read the content of the cluster and print it (replace this with your actual read operation)
-                VGA::print_str("Reading content from cluster ");
-                VGA::print_int(cluster);
-                VGA::print_str("\n");
-
-                // Move to the next cluster
-                cluster = FAT[cluster];
+                // Copy the directory entry into the structure
+                memCpy(dirEntry, buffer + i, sizeof(DirectoryEntry));
+                return true;
             }
         }
-        else
+
+        // No directory entry found
+        return false;
+    }
+
+    void writeCluster(unsigned int clusterNumber, const char *data, unsigned int dataSize)
+    {
+        // Calculate the address of the cluster
+        unsigned int clusterAddress = clusterNumber * sector_size;
+
+        // Write the data to the cluster
+        writeSector(clusterAddress, reinterpret_cast<unsigned char *>(const_cast<char *>(data)), dataSize);
+    }
+
+    void updateDirectoryEntry(const char *filename, const DirectoryEntry *dirEntry)
+    {
+        // Calculate the root directory sector
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
+        unsigned int rootDirSectors = ((bootSector.root_entry_count * 32) + (bootSector.bytes_per_sector - 1)) / bootSector.bytes_per_sector;
+        unsigned int firstDataSector = bootSector.reserved_sector_count + (bootSector.table_count * bootSector.table_size_16) + rootDirSectors;
+        unsigned int firstSectorofRootDir = firstDataSector - rootDirSectors;
+
+        // Read the root directory into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        readSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+        // Find the directory entry for the file
+        for (int i = 0; i < bootSector.bytes_per_sector; i += 32)
         {
-            VGA::print_str("\nFile not found.\n");
+            if (STR::strnCmp(reinterpret_cast<const char *>(buffer + i), filename, FILENAME_LENGTH) == 0)
+            {
+                // Copy the updated directory entry into the buffer
+                memCpy(buffer + i, dirEntry, sizeof(DirectoryEntry));
+
+                // Write the buffer back to the root directory
+                writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+                return;
+            }
         }
     }
 
+    void readCluster(unsigned int clusterNumber, char *buffer, unsigned int bufferSize)
+    {
+        // Calculate the address of the cluster
+        unsigned int clusterAddress = clusterNumber * sector_size;
 
-} // namespace drivers::video::VGA
+        // Read the data from the cluster
+        readSector(clusterAddress, reinterpret_cast<unsigned char*>(buffer), bufferSize);
+    }
+
+    void writeFile(const char *filename, const char *data, unsigned int dataSize)
+    {
+        // Find the file's directory entry
+        DirectoryEntry dirEntry;
+        if (!findDirectoryEntry(filename, &dirEntry))
+        {
+            VGA::print_str("File not found\n");
+            return;
+        }
+
+        // Write the data to the file's first cluster
+        writeCluster(dirEntry.first_cluster, data, dataSize);
+
+        // Update the file's size in its directory entry
+        dirEntry.file_size = dataSize;
+
+        // Write the updated directory entry back to the root directory
+        updateDirectoryEntry(filename, &dirEntry);
+
+        VGA::print_str("\nData written successfully\n");
+    }
+
+    void readFile(const char *filename, char *buffer, unsigned int bufferSize)
+    {
+        // Find the file's directory entry
+        DirectoryEntry dirEntry;
+        if (!findDirectoryEntry(filename, &dirEntry))
+        {
+            VGA::print_str("File not found\n");
+            return;
+        }
+
+        // Read the data from the file's first cluster
+        readCluster(dirEntry.first_cluster, buffer, bufferSize);
+
+        VGA::print_str("\nData read successfully\n");
+    }
+
+}
