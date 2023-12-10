@@ -56,24 +56,28 @@ void handle_command(const char *command)
     }
     else if (STR::strEqual(command, "create"))
     {
-        F::createFile("hello", "txt", 0x00, 1024);
+        F::createFile("hello.txt", 0x00, 1024);
     }
     else if (STR::strEqual(command, "read"))
     {
         char buffer[1024];
-        F::readFile("hello", buffer, sizeof(buffer));
+        F::readFile("hello.txt", buffer, sizeof(buffer));
         VGA::print_str(buffer);
     }
     else if (STR::strEqual(command, "write"))
     {
         const char *data = "Hello, World!";
-        F::writeFile("hello", data, STR::strLen(data));
+        F::writeFile("hello.txt", data, STR::strLen(data));
     }
     else if (STR::strEqual(command, "read"))
     {
         char buffer[1024];
-        F::readFile("hello", buffer, sizeof(buffer));
+        F::readFile("hello.txt", buffer, sizeof(buffer));
         VGA::print_str(buffer);
+    }
+    else if(STR::strEqual(command, "delete"))
+    {
+        F::deleteFile("hello.txt");
     }
     else
     {

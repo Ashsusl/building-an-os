@@ -9,10 +9,16 @@ namespace VGA = drivers::video::VGA;
 namespace STR = drivers::string::STR;
 namespace drivers::file::F
 {
-    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize)
+    void createFile(const char *filename, uint8_t attributes, uint32_t fileSize)
     {
         fat_BS_t bootSector;
         readBootSector(&bootSector);
+
+        char name[FILENAME_LENGTH + 1];
+        char extension[EXTENSION_LENGTH + 1];
+
+        // Split the filename into a name and an extension
+        splitFilename(filename, name, extension);
 
         // Calculate the root directory sector
         unsigned int rootDirSectors = ((bootSector.root_entry_count * 32) + (bootSector.bytes_per_sector - 1)) / bootSector.bytes_per_sector;
@@ -216,7 +222,7 @@ namespace drivers::file::F
         unsigned int clusterAddress = clusterNumber * sector_size;
 
         // Read the data from the cluster
-        readSector(clusterAddress, reinterpret_cast<unsigned char*>(buffer), bufferSize);
+        readSector(clusterAddress, reinterpret_cast<unsigned char *>(buffer), bufferSize);
     }
 
     void writeFile(const char *filename, const char *data, unsigned int dataSize)
@@ -243,6 +249,11 @@ namespace drivers::file::F
 
     void readFile(const char *filename, char *buffer, unsigned int bufferSize)
     {
+        char name[FILENAME_LENGTH + 1];
+        char extension[EXTENSION_LENGTH + 1];
+
+        // Split the filename into a name and an extension
+        splitFilename(filename, name, extension);
         // Find the file's directory entry
         DirectoryEntry dirEntry;
         if (!findDirectoryEntry(filename, &dirEntry))
@@ -257,4 +268,100 @@ namespace drivers::file::F
         VGA::print_str("\nData read successfully\n");
     }
 
+    void deleteFile(const char *filename)
+    {
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
+
+        // Calculate the root directory sector
+        unsigned int rootDirSectors = ((bootSector.root_entry_count * 32) + (bootSector.bytes_per_sector - 1)) / bootSector.bytes_per_sector;
+        unsigned int firstDataSector = bootSector.reserved_sector_count + (bootSector.table_count * bootSector.table_size_16) + rootDirSectors;
+        unsigned int firstSectorofRootDir = firstDataSector - rootDirSectors;
+
+        // Read the root directory into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        char name[FILENAME_LENGTH + 1];
+        char extension[EXTENSION_LENGTH + 1];
+
+        // Split the filename into a name and an extension
+        splitFilename(filename, name, extension);
+
+        readSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+        // Find the directory entry for the file
+        for (int i = 0; i < bootSector.bytes_per_sector; i += 32)
+        {
+            if (STR::strnCmp(reinterpret_cast<const char *>(buffer + i), filename, FILENAME_LENGTH) == 0)
+            {
+                // Get the first cluster of the file
+                uint16_t firstCluster = *(uint16_t *)(buffer + i + 26);
+
+                // Mark the clusters used by the file as free in the FAT
+                markClustersAsFree(firstCluster);
+
+                // Remove the directory entry
+                buffer[i] = 0xE5;
+
+                // Write the sector back to disk
+                writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
+
+                VGA::print_str("\nFile deleted successfully\n");
+                return;
+            }
+        }
+
+        VGA::print_str("\nFile not found\n");
+    }
+
+    void markClustersAsFree(uint16_t firstCluster)
+    {
+        fat_BS_t bootSector;
+        readBootSector(&bootSector);
+
+        // Calculate the first FAT sector
+        unsigned int firstFatSector = bootSector.reserved_sector_count;
+
+        // Read the FAT into a buffer
+        unsigned char buffer[bootSector.bytes_per_sector];
+        readSector(firstFatSector, buffer, bootSector.bytes_per_sector);
+
+        // Traverse the FAT starting from firstCluster, marking each cluster as free
+        uint16_t currentCluster = firstCluster;
+        while (currentCluster < END_OF_FILE_MARKER)
+        {
+            // Calculate the offset of the current cluster in the buffer
+            unsigned int offset = currentCluster * 2;
+
+            // Get the next cluster from the FAT
+            uint16_t nextCluster = *(uint16_t *)(buffer + offset);
+
+            // Mark the current cluster as free
+            *(uint16_t *)(buffer + offset) = 0;
+
+            // Move to the next cluster
+            currentCluster = nextCluster;
+        }
+
+        // Write the updated FAT back to disk
+        writeSector(firstFatSector, buffer, bootSector.bytes_per_sector);
+    }
+
+    void splitFilename(const char *filename, char *name, char *extension)
+    {
+        // Find the last occurrence of '.'
+        const char *dot = STR::strChr(filename, '.');
+
+        if (!dot || dot == filename)
+        {
+            // No extension found, copy the whole filename
+            STR::strnCpy(name, filename, FILENAME_LENGTH);
+            extension[0] = '\0'; // Empty extension
+        }
+        else
+        {
+            // Copy the name and extension
+            STR::strnCpy(name, filename, dot - filename);
+            STR::strnCpy(extension, dot + 1, EXTENSION_LENGTH);
+        }
+    }
 }

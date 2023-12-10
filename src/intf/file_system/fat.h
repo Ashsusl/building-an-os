@@ -92,7 +92,7 @@ namespace drivers::file::F
 
     } __attribute__((packed)) fat_BS_t;
 
-    void createFile(const char *filename, const char *extension, uint8_t attributes, uint32_t fileSize);
+    void createFile(const char *filename, uint8_t attributes, uint32_t fileSize);
     uint16_t findAvailableCluster();
     void writeSector(unsigned int sectorNumber, unsigned char *buffer, unsigned int sectorSize);
     void readBootSector(fat_BS_t *bootSector);
@@ -103,6 +103,9 @@ namespace drivers::file::F
     void readCluster(unsigned int clusterNumber, char *buffer, unsigned int bufferSize);
     void writeFile(const char *filename, const char *data, unsigned int dataSize);
     void readFile(const char *filename, char *buffer, unsigned int bufferSize);
+    void deleteFile(const char *filename);
+    void markClustersAsFree(uint16_t firstCluster);
+    void splitFilename(const char *filename, char *name, char *extension);
 }
 
 #pragma pack(pop)
