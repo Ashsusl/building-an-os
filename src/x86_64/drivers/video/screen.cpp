@@ -1,7 +1,7 @@
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 #include <port.h>
 
-namespace drivers::video::VGA
+namespace drivers::video::SCR
 {
     const static size_t NUM_COLS = 80; // The number of columns in the VGA
     const static size_t NUM_ROWS = 25; // The number of rows in the VGA
@@ -17,14 +17,14 @@ namespace drivers::video::VGA
 
     void back_space()
     {
-        if (VGA::cursor.col > 8)
+        if (SCR::cursor.col > 8)
         {
-            VGA::cursor.col--;
-            VGA::VGA_Cell empty = {
+            SCR::cursor.col--;
+            SCR::SCREEN_Cell empty = {
                 .character = ' ',
                 .color = Color::from(Color::WHITE, Color::BLACK),
             };
-            VGA_BUFFER[cursor.col + NUM_COLS * cursor.row] = empty;
+            SCREEN_BUFFER[cursor.col + NUM_COLS * cursor.row] = empty;
             update_cursor();
         }
     }
@@ -42,14 +42,14 @@ namespace drivers::video::VGA
 
     static void clear_row(size_t row)
     {
-        const VGA_Cell empty = {
+        const SCREEN_Cell empty = {
             .character = ' ',
             .color = Color::from(Color::WHITE, Color::BLACK),
         };
 
         for (size_t col = 0; col < NUM_COLS; col++)
         {
-            VGA_BUFFER[col + NUM_COLS * row] = empty;
+            SCREEN_BUFFER[col + NUM_COLS * row] = empty;
         }
         update_cursor();
     }
@@ -87,7 +87,7 @@ namespace drivers::video::VGA
         {
             for (size_t col = 0; col < NUM_COLS; col++)
             {
-                VGA_BUFFER[col + NUM_COLS * (row - 1)] = VGA_BUFFER[col + NUM_COLS * row];
+                SCREEN_BUFFER[col + NUM_COLS * (row - 1)] = SCREEN_BUFFER[col + NUM_COLS * row];
             }
         }
 
@@ -122,7 +122,7 @@ namespace drivers::video::VGA
             print_newline();
         }
 
-        VGA_BUFFER[cursor.col + NUM_COLS * cursor.row] = (VGA_Cell){
+        SCREEN_BUFFER[cursor.col + NUM_COLS * cursor.row] = (SCREEN_Cell){
             .character = character,
             .color = current_color,
         };
@@ -218,7 +218,7 @@ namespace drivers::video::VGA
         }
 
         // Print the hexadecimal string
-        VGA::print_str(hex_str);
+        SCR::print_str(hex_str);
     }
 
     size_t get_cursor_col()

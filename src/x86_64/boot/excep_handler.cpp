@@ -1,7 +1,7 @@
 #include "isr.h"
 
-namespace VGA = drivers::video::VGA;
-namespace Color = VGA::Color;
+namespace SCR = drivers::video::SCR;
+namespace Color = SCR::Color;
 
 /// The mnemonics for the different exceptions.
 /// These can be found at https://wiki.osdev.org/Exceptions.
@@ -22,7 +22,7 @@ void exception_handler(Exception_Stack_Frame frame)
 {
     const char* exception_name = exception_names[frame.int_no];
 
-    VGA::set_color(Color::WHITE, Color::RED);
-    VGA::print_str("ERR: #");
-    VGA::print_str(exception_name);
+    SCR::set_color(Color::WHITE, Color::RED);
+    SCR::print_str("ERR: #");
+    SCR::print_str(exception_name);
 }

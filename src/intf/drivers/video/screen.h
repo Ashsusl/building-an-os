@@ -3,11 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define VGA_BUFFER ((VGA_Cell *)0xB8000)
+#define SCREEN_BUFFER ((SCREEN_Cell *)0xB8000)
 
 #define TAB_SIZE 4 // Size of a tab in spaces
 
-namespace drivers::video::VGA
+namespace drivers::video::SCR
 {
     namespace Color
     {
@@ -48,12 +48,12 @@ namespace drivers::video::VGA
         size_t col;
     } Cursor;
 
-    /// Represents a single cell in the VGA tracking both the character and the brush for that character.
-    typedef struct __attribute__((packed)) VGA_Cell
+    /// Represents a single cell in the SCREEN tracking both the character and the brush for that character.
+    typedef struct __attribute__((packed)) SCREEN_Cell
     {
         uint8_t character;
         uint8_t color;
-    } VGA_Cell;
+    } SCREEN_Cell;
 
     void update_cursor();
 

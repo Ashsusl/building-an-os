@@ -1,9 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-
-#include "drivers/video/vga.h"
-
+#include "drivers/video/screen.h"
 /// Represents the stack frame for an exception including
 /// the interrupt number, the error code, and registers for debugging.
 typedef struct __attribute__((packed)) Exception_Stack_Frame {

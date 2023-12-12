@@ -1,13 +1,14 @@
 #include "file_system/fat.h"
 #include "file_system/disk.h"
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 #include "drivers/string/string.h"
 #include "drivers/memory/mem.h"
 #include "port.h"
 #include "stdint.h"
 
-namespace VGA = drivers::video::VGA;
+namespace VGA = drivers::video::SCR;
 namespace STR = drivers::string::STR;
+namespace MEM = drivers::memory::MEM;
 namespace drivers::file::F
 {
     uint16_t findAvailableCluster()
@@ -51,7 +52,7 @@ namespace drivers::file::F
         uint8_t *sectorAddress = disk + sectorNumber * sectorSize;
 
         // Copy the buffer into the sector
-        memCpy(sectorAddress, buffer, sectorSize);
+        MEM::memCpy(sectorAddress, buffer, sectorSize);
     }
 
     void readBootSector(fat_BS_t *bootSector)
@@ -60,7 +61,7 @@ namespace drivers::file::F
         uint8_t *disk = reinterpret_cast<uint8_t *>(0x100000);
 
         // Copy the boot sector into the structure
-        memCpy(bootSector, disk, sizeof(fat_BS_t));
+        MEM::memCpy(bootSector, disk, sizeof(fat_BS_t));
     }
 
     unsigned int readFATandFollowChain(unsigned int activeCluster, unsigned int firstFatSector, unsigned int sectorSize)
@@ -90,7 +91,7 @@ namespace drivers::file::F
         uint8_t *sectorAddress = disk + sectorNumber * sectorSize;
 
         // Copy the sector into the buffer
-        memCpy(buffer, sectorAddress, sectorSize);
+        MEM::memCpy(buffer, sectorAddress, sectorSize);
     }
 
     bool findDirectoryEntry(const char *filename, DirectoryEntry *dirEntry)
@@ -112,7 +113,7 @@ namespace drivers::file::F
             if (STR::strnCmp(reinterpret_cast<const char *>(buffer + i), filename, FILENAME_LENGTH) == 0)
             {
                 // Copy the directory entry into the structure
-                memCpy(dirEntry, buffer + i, sizeof(DirectoryEntry));
+                MEM::memCpy(dirEntry, buffer + i, sizeof(DirectoryEntry));
                 return true;
             }
         }
@@ -149,7 +150,7 @@ namespace drivers::file::F
             if (STR::strnCmp(reinterpret_cast<const char *>(buffer + i), filename, FILENAME_LENGTH) == 0)
             {
                 // Copy the updated directory entry into the buffer
-                memCpy(buffer + i, dirEntry, sizeof(DirectoryEntry));
+               MEM::memCpy(buffer + i, dirEntry, sizeof(DirectoryEntry));
 
                 // Write the buffer back to the root directory
                 writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);

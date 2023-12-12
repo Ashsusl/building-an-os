@@ -1,9 +1,9 @@
 #include "drivers/mouse/mirq_handler.h"
 #include "port.h"
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 
-namespace VGA = drivers::video::VGA;
-namespace Color = VGA::Color;
+namespace SCR = drivers::video::SCR;
+namespace Color = SCR::Color;
 
 namespace custom
 {
@@ -43,14 +43,14 @@ namespace drivers::mouse
         if (!(x == 65 && y == 65) && !(x == 97 && y == -159))
         {
             // Clear the previous cursor
-            VGA::clear_mouse_cursor(VGA::get_cursor_col(), VGA::get_cursor_row());
+            SCR::clear_mouse_cursor(SCR::get_cursor_col(), SCR::get_cursor_row());
 
             // Update cursor position
-            VGA::set_cursor_position(custom::max(static_cast<size_t>(0), custom::min(VGA::get_cursor_col(), static_cast<size_t>(79))),
-                                     custom::max(static_cast<size_t>(0), custom::min(VGA::get_cursor_row(), static_cast<size_t>(24))));
+            SCR::set_cursor_position(custom::max(static_cast<size_t>(0), custom::min(SCR::get_cursor_col(), static_cast<size_t>(79))),
+                                     custom::max(static_cast<size_t>(0), custom::min(SCR::get_cursor_row(), static_cast<size_t>(24))));
 
             // Draw the new cursor
-            VGA::draw_mouse_cursor(VGA::get_cursor_col(), VGA::get_cursor_row());
+            SCR::draw_mouse_cursor(SCR::get_cursor_col(), SCR::get_cursor_row());
         }
 
         // Acknowledge the end of interrupt to the interrupt controller

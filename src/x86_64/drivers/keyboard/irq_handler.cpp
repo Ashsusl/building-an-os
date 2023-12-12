@@ -1,14 +1,15 @@
 #include "drivers/keyboard/irq_handler.h"
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 #include "drivers/memory/mem.h"
 #include "file_system/fat.h"
 #include "drivers/string/string.h"
 #include "port.h"
 #include "pic.h"
 
-namespace VGA = drivers::video::VGA;
+namespace SCR = drivers::video::SCR;
 namespace STR = drivers::string::STR;
-namespace Color = VGA::Color;
+namespace Color = SCR::Color;
+namespace MEM = drivers::memory::MEM;
 
 namespace drivers::keyboard
 {
@@ -39,7 +40,7 @@ namespace drivers::keyboard
 
     void reset_key_buffer()
     {
-        memSet(user_input_buffer, 0, BUFFER_SIZE);
+        MEM::memSet(user_input_buffer, 0, BUFFER_SIZE);
         user_input_index = 0;
     }
 
@@ -54,8 +55,8 @@ namespace drivers::keyboard
             if (user_input_index > 0)
             {
                 user_input_buffer[--user_input_index] = '\0';
-                VGA::back_space();
-                VGA::update_cursor();
+                SCR::back_space();
+                SCR::update_cursor();
             }
         }
         else if (key == K_LSFT)
@@ -79,15 +80,15 @@ namespace drivers::keyboard
             }
             if (key_state.shift)
             {
-                VGA::print_chr(get_shifted_variant(key));
+                SCR::print_chr(get_shifted_variant(key));
             }
             else if (key_state.caps)
             {
-                VGA::print_chr(toupper(key));
+                SCR::print_chr(toupper(key));
             }
             else
             {
-                VGA::print_chr(key);
+                SCR::print_chr(key);
             }
         }
     }

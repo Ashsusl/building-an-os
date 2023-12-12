@@ -1,4 +1,4 @@
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 #include <idt.h>
 #include "file_system/fat.h"
 #include "file_system/disk.h"
@@ -7,36 +7,38 @@
 #include "drivers/keyboard/irq_handler.h"
 
 namespace STR = drivers::string::STR;
-namespace VGA = drivers::video::VGA;
-namespace Color = VGA::Color;
+namespace SCR = drivers::video::SCR;
+namespace Color = SCR::Color;
 namespace F = drivers::file::F;
+namespace KEY = drivers::keyboard;
 
 void print_welcome();
 void handle_command(const char *command);
 void clearBuffer(char *buffer, unsigned int size);
+void print_help();
 
-char buffer[1024];
+char buffer[4096];
 
 /// The entry point into the MY_OS kernel.
 extern "C" void kernel_main()
 {
     // Print the startup banner
-    VGA::clear_screen();
+    SCR::clear_screen();
 
     print_welcome();
 
     // Create temporary text input prompt
-    VGA::print_str("\nroot::> ");
+    SCR::print_str("\nroot::> ");
 
     init_idt();
 
     while (true)
     {
-        if (drivers::keyboard::is_command_ready())
+        if (KEY::is_command_ready())
         {
-            const char *command = drivers::keyboard::get_command();
+            const char *command = KEY::get_command();
             handle_command(command);
-            drivers::keyboard::reset_command();
+            KEY::reset_command();
         }
         else
         {
@@ -48,41 +50,45 @@ extern "C" void kernel_main()
 /// Prints a startup banner
 void print_welcome()
 {
-    VGA::set_color(Color::GREEN, Color::BLACK);
-    VGA::print_str("Welcome to MYOS!\n");
+    SCR::set_color(Color::WHITE, Color::BLACK);
+    SCR::print_str("Welcome to MYOS!\n");
 }
 
 void handle_command(const char *command)
 {
     if (STR::strEqual(command, "clear"))
     {
-        VGA::clear_screen();
+        SCR::clear_screen();
     }
     else if (STR::strEqual(command, "create"))
     {
-        F::createFile("hello.txt", 0x00, 1024);
+        F::createFile("hello.txt", 0x00, 2048);
     }
     else if (STR::strEqual(command, "write"))
     {
-        const char *data = "Hello, World!";
+        const char *data = "Hi!";
         F::writeFile("hello.txt", data, STR::strLen(data));
     }
     else if (STR::strEqual(command, "read"))
     {
         F::readFile("hello.txt", buffer, sizeof(buffer));
-        VGA::print_str(buffer);
+        SCR::print_str(buffer);
     }
     else if (STR::strEqual(command, "delete"))
     {
         F::deleteFile("hello.txt");
         clearBuffer(buffer, sizeof(buffer));
     }
+    else if (STR::strEqual(command, "help"))
+    {
+       print_help();
+    }
     else
     {
-        VGA::print_str("\nBAD COMMAND!!");
+        SCR::print_str("\nBAD COMMAND!!");
     }
-    VGA::print_str("\nroot::> ");
-    VGA::update_cursor();
+    SCR::print_str("\nroot::> ");
+    SCR::update_cursor();
     return;
 }
 
@@ -92,4 +98,15 @@ void clearBuffer(char *buffer, unsigned int size)
     {
         buffer[i] = 0;
     }
+}
+
+void print_help()
+{
+    SCR::clear_screen();
+    SCR::print_str("clear  ::    clears the screen\n");
+    SCR::print_str("create ::    Creates a file named hello.txt\n");
+    SCR::print_str("write  ::    Writes Hello, World! to the file\n");
+    SCR::print_str("read   ::    Reads contents from the file\n");
+    SCR::print_str("delete ::    Deletes a file named hello.txt\n");
+    SCR::print_str("help   ::    Help menu\n");
 }

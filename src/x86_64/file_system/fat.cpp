@@ -1,13 +1,14 @@
 #include "file_system/fat.h"
 #include "file_system/disk.h"
-#include "drivers/video/vga.h"
+#include "drivers/video/screen.h"
 #include "drivers/string/string.h"
 #include "drivers/memory/mem.h"
 #include "port.h"
 #include "stdint.h"
 
-namespace VGA = drivers::video::VGA;
+namespace SCR = drivers::video::SCR;
 namespace STR = drivers::string::STR;
+namespace MEM = drivers::memory::MEM;
 namespace drivers::file::F
 {
     void createFile(const char *filename, uint8_t attributes, uint32_t fileSize)
@@ -41,13 +42,13 @@ namespace drivers::file::F
                 // If no available cluster was found, print an error message and return
                 if (firstCluster == 0)
                 {
-                    VGA::print_str("\nNo available clusters found\n");
+                    SCR::print_str("\nNo available clusters found\n");
                     return;
                 }
 
                 // Copy the filename and extension
-                memCpy(buffer + i, filename, FILENAME_LENGTH);
-                memCpy(buffer + i + 8, extension, EXTENSION_LENGTH);
+                MEM::memCpy(buffer + i, filename, FILENAME_LENGTH);
+                MEM::memCpy(buffer + i + 8, extension, EXTENSION_LENGTH);
 
                 // Set the file attributes
                 buffer[i + 11] = attributes;
@@ -61,12 +62,12 @@ namespace drivers::file::F
                 // Write the sector back to disk
                 writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
 
-                VGA::print_str("\nFile created successfully\n");
+                SCR::print_str("\nFile created successfully\n");
                 return;
             }
         }
 
-        VGA::print_str("\nNo empty directory entries found\n");
+        SCR::print_str("\nNo empty directory entries found\n");
     }
 
     void writeFile(const char *filename, const char *data, unsigned int dataSize)
@@ -75,7 +76,7 @@ namespace drivers::file::F
         DirectoryEntry dirEntry;
         if (!findDirectoryEntry(filename, &dirEntry))
         {
-            VGA::print_str("File not found\n");
+            SCR::print_str("\nFile not found\n");
             return;
         }
 
@@ -88,7 +89,7 @@ namespace drivers::file::F
         // Write the updated directory entry back to the root directory
         updateDirectoryEntry(filename, &dirEntry);
 
-        VGA::print_str("\nData written successfully\n");
+        SCR::print_str("\nData written successfully\n");
     }
 
     void readFile(const char *filename, char *buffer, unsigned int bufferSize)
@@ -102,14 +103,14 @@ namespace drivers::file::F
         DirectoryEntry dirEntry;
         if (!findDirectoryEntry(filename, &dirEntry))
         {
-            VGA::print_str("File not found\n");
+            SCR::print_str("\nFile not found\n");
             return;
         }
 
         // Read the data from the file's first cluster
         readCluster(dirEntry.first_cluster, buffer, bufferSize);
 
-        VGA::print_str("\nData read successfully\n");
+        SCR::print_str("\nData read successfully\n");
         buffer[dirEntry.file_size] = '\0';
     }
 
@@ -150,15 +151,14 @@ namespace drivers::file::F
                 // Write the sector back to disk
                 writeSector(firstSectorofRootDir, buffer, bootSector.bytes_per_sector);
 
-                VGA::print_str("\nFile deleted successfully\n");
+                SCR::print_str("\nFile deleted successfully\n");
                 return;
             }
         }
 
-        VGA::print_str("\nFile not found\n");
+        SCR::print_str("\nFile not found\n");
     }
 
-    
     void splitFilename(const char *filename, char *name, char *extension)
     {
         // Find the last occurrence of '.'
@@ -177,4 +177,48 @@ namespace drivers::file::F
             STR::strnCpy(extension, dot + 1, EXTENSION_LENGTH);
         }
     }
+
+    char *strSplit(char *str, char delimiter, int n)
+    {
+        // Pointer to the current token
+        char *token = str;
+
+        // Current token index
+        int index = 0;
+
+        // Iterate over the string
+        for (char *it = str; *it != '\0'; ++it)
+        {
+            // If the current character is the delimiter
+            if (*it == delimiter)
+            {
+                // Replace the delimiter with a null character
+                *it = '\0';
+
+                // If the current token is the one we're looking for
+                if (index == n)
+                {
+                    // Return the current token
+                    return token;
+                }
+
+                // Move to the next token
+                token = it + 1;
+
+                // Increment the token index
+                ++index;
+            }
+        }
+
+        // If the last token is the one we're looking for
+        if (index == n)
+        {
+            // Return the last token
+            return token;
+        }
+
+        // If the token was not found, return an empty string
+        return "";
+    }
+
 }
