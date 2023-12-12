@@ -178,47 +178,4 @@ namespace drivers::file::F
         }
     }
 
-    char *strSplit(char *str, char delimiter, int n)
-    {
-        // Pointer to the current token
-        char *token = str;
-
-        // Current token index
-        int index = 0;
-
-        // Iterate over the string
-        for (char *it = str; *it != '\0'; ++it)
-        {
-            // If the current character is the delimiter
-            if (*it == delimiter)
-            {
-                // Replace the delimiter with a null character
-                *it = '\0';
-
-                // If the current token is the one we're looking for
-                if (index == n)
-                {
-                    // Return the current token
-                    return token;
-                }
-
-                // Move to the next token
-                token = it + 1;
-
-                // Increment the token index
-                ++index;
-            }
-        }
-
-        // If the last token is the one we're looking for
-        if (index == n)
-        {
-            // Return the last token
-            return token;
-        }
-
-        // If the token was not found, return an empty string
-        return "";
-    }
-
 }

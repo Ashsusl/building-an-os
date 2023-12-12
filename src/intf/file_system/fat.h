@@ -96,7 +96,6 @@ namespace drivers::file::F
     void deleteFile(const char *filename);
     void splitFilename(const char *filename, char *name, char *extension);
     bool findDirectoryEntry(const char *filename, DirectoryEntry *dirEntry);
-    char *strSplit(char *str, char delimiter, int n);
 }
 
 #pragma pack(pop)

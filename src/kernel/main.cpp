@@ -26,7 +26,8 @@ extern "C" void kernel_main()
     SCR::clear_screen();
 
     print_welcome();
-
+    print_help();
+    
     // Create temporary text input prompt
     SCR::print_str("\nroot::> ");
 
